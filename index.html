@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hex Grid Movement</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="600" height="600"></canvas>
+  <div id="status">Click the blue unit to select, then click an adjacent hex to move</div>
+  <script>
+    class Hex {
+      constructor(q, r) {
+        this.q = q;
+        this.r = r;
+      }
+
+      getPixelX(hexSize) {
+        return hexSize * (Math.sqrt(3) * this.q + Math.sqrt(3) / 2 * this.r);
+      }
+
+      getPixelY(hexSize) {
+        return hexSize * (3 / 2 * this.r);
+      }
+    }
+
+    class Grid {
+      constructor(radius) {
+        this.hexes = [];
+        for (let q = -radius; q <= radius; q++) {
+          for (let r = -radius; r <= radius; r++) {
+            if (Math.abs(q + r) <= radius) {
+              this.hexes.push(new Hex(q, r));
+            }
+          }
+        }
+      }
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const HEX_SIZE = 30;
+    const grid = new Grid(3);
+
+    // Logical unit position in axial coordinates
+    let unitPosition = { q: 0, r: 0 };
+    // Pixel coordinates for animation
+    let unitPixelPos = getPixelFromAxial(unitPosition);
+    // Track whether an animation is in progress.
+    let isAnimating = false;
+    // Track whether the unit is selected.
+    let unitSelected = false;
+
+    // Returns the pixel {x, y} for a given axial coordinate.
+    function getPixelFromAxial(pos) {
+      const hex = new Hex(pos.q, pos.r);
+      return {
+        x: hex.getPixelX(HEX_SIZE) + canvas.width / 2,
+        y: hex.getPixelY(HEX_SIZE) + canvas.height / 2
+      };
+    }
+
+
+ const tileImage = new Image();
+  tileImage.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/640px-PNG_transparency_demonstration_1.png'; // Replace with your actual tile image path
+  tileImage.onload = () => {
+    draw(); // Redraw once the image is loaded
+  };
+
+
+    function drawHex(hex) {
+  const x = hex.getPixelX(HEX_SIZE) + canvas.width / 2;
+  const y = hex.getPixelY(HEX_SIZE) + canvas.height / 2;
+
+  // Create the hexagon path.
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 3 * i + Math.PI / 6; // 30° offset for pointy-top hex.
+    const px = x + HEX_SIZE * Math.cos(angle);
+    const py = y + HEX_SIZE * Math.sin(angle);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+
+  // Save the context and set the clipping region to the hexagon.
+  ctx.save();
+  ctx.clip();
+
+  // Draw the image inside the clipped hexagon area.
+  ctx.drawImage(tileImage, x - HEX_SIZE, y - HEX_SIZE, HEX_SIZE * 2, HEX_SIZE * 2);
+
+  // Restore the context to remove the clipping region.
+  ctx.restore();
+
+  // Optionally, if you want a border around the hex, stroke the path.
+  ctx.strokeStyle = '#333';
+  ctx.stroke();
+}
+
+
+    // Draws the unit at its current pixel position.
+    function drawUnit() {
+      // Draw the unit as a blue circle.
+      ctx.beginPath();
+      ctx.arc(unitPixelPos.x, unitPixelPos.y, HEX_SIZE / 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'blue';
+      ctx.fill();
+
+      // If the unit is selected, add an outer ring to indicate selection.
+      if (unitSelected) {
+        ctx.beginPath();
+        ctx.arc(unitPixelPos.x, unitPixelPos.y, HEX_SIZE / 2 + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.lineWidth = 1; // reset the line width
+      }
+    }
+
+    // Convert two axial positions into cube coordinates to check for adjacency.
+    function areAdjacent(hex1, hex2) {
+      const cube1 = { 
+        x: hex1.q, 
+        z: hex1.r, 
+        y: -hex1.q - hex1.r 
+      };
+      const cube2 = { 
+        x: hex2.q, 
+        z: hex2.r, 
+        y: -hex2.q - hex2.r 
+      };
+
+      const dx = Math.abs(cube1.x - cube2.x);
+      const dy = Math.abs(cube1.y - cube2.y);
+      const dz = Math.abs(cube1.z - cube2.z);
+
+      return (dx + dy + dz) / 2 === 1;
+    }
+
+    // Animate unit movement from start to end pixels over a set duration (in ms).
+    function animateUnitMovement(startPos, endPos, duration) {
+      isAnimating = true;
+      const startTime = performance.now();
+
+      function animate(currentTime) {
+        let elapsed = currentTime - startTime;
+        let t = elapsed / duration;
+        if (t > 1) t = 1;
+
+        // Linear interpolation.
+        unitPixelPos.x = startPos.x + (endPos.x - startPos.x) * t;
+        unitPixelPos.y = startPos.y + (endPos.y - startPos.y) * t;
+
+        draw();  // Redraw the entire scene.
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          isAnimating = false;
+          unitPixelPos = { ...endPos };
+          // Unselect the unit after moving.
+          unitSelected = false;
+          draw();
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // Handle clicks on the canvas.
+    function handleClick(event) {
+      if (isAnimating) return; // ignore clicks during animation
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+
+      // Check if the blue unit (circle) was clicked.
+      const dx = mouseX - unitPixelPos.x;
+      const dy = mouseY - unitPixelPos.y;
+      const distFromUnit = Math.sqrt(dx * dx + dy * dy);
+      if (distFromUnit < HEX_SIZE / 2) {
+        // Toggle selection state.
+        unitSelected = !unitSelected;
+        draw();
+        return;
+      }
+
+      // If the unit is selected, check if the click is on a valid adjacent hex.
+      if (unitSelected) {
+        let closestHex = null;
+        let minDist = Infinity;
+
+        grid.hexes.forEach(hex => {
+          const x = hex.getPixelX(HEX_SIZE) + canvas.width / 2;
+          const y = hex.getPixelY(HEX_SIZE) + canvas.height / 2;
+          const dx = mouseX - x;
+          const dy = mouseY - y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < minDist) {
+            minDist = dist;
+            closestHex = hex;
+          }
+        });
+
+        // Only register the click if it's within the hex radius.
+        // if (closestHex && minDist < HEX_SIZE) {
+          // Only allow movement if the target hex is adjacent.
+          // if (!areAdjacent(new Hex(unitPosition.q, unitPosition.r), closestHex)) {
+          //   return;
+          // }
+          const startPos = { ...unitPixelPos };
+          const endPos = {
+            x: closestHex.getPixelX(HEX_SIZE) + canvas.width / 2,
+            y: closestHex.getPixelY(HEX_SIZE) + canvas.height / 2
+          };
+
+          // Update logical position.
+          unitPosition = { q: closestHex.q, r: closestHex.r };
+
+          // Begin the animation and unselect the unit.
+          unitSelected = false;
+          animateUnitMovement(startPos, endPos, 300);
+        // }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw grid hexes.
+      grid.hexes.forEach(hex => {
+        drawHex(hex, '#eee');
+      });
+
+      // Draw the unit.
+      drawUnit();
+    }
+
+    canvas.addEventListener('click', handleClick);
+    draw();
+  </script>
+</body>
+</html>
