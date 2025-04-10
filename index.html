@@ -42,7 +42,7 @@
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const HEX_SIZE = 30;
+    const HEX_SIZE = 90;
     const grid = new Grid(3);
 
     // Logical unit position in axial coordinates
@@ -65,62 +65,63 @@
 
 
  const tileImage = new Image();
-  tileImage.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/640px-PNG_transparency_demonstration_1.png'; // Replace with your actual tile image path
+  tileImage.src =  'assets/imgs/hex.png'; // Replace with your actual tile image path
   tileImage.onload = () => {
     draw(); // Redraw once the image is loaded
   };
 
 
     function drawHex(hex) {
-  const x = hex.getPixelX(HEX_SIZE) + canvas.width / 2;
-  const y = hex.getPixelY(HEX_SIZE) + canvas.height / 2;
+    const x = hex.getPixelX(HEX_SIZE) + canvas.width / 2;
+    const y = hex.getPixelY(HEX_SIZE) + canvas.height / 2;
 
-  // Create the hexagon path.
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const angle = Math.PI / 3 * i + Math.PI / 6; // 30° offset for pointy-top hex.
-    const px = x + HEX_SIZE * Math.cos(angle);
-    const py = y + HEX_SIZE * Math.sin(angle);
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-
-  // Save the context and set the clipping region to the hexagon.
-  ctx.save();
-  ctx.clip();
-
-  // Draw the image inside the clipped hexagon area.
-  ctx.drawImage(tileImage, x - HEX_SIZE, y - HEX_SIZE, HEX_SIZE * 2, HEX_SIZE * 2);
-
-  // Restore the context to remove the clipping region.
-  ctx.restore();
-
-  // Optionally, if you want a border around the hex, stroke the path.
-  ctx.strokeStyle = '#333';
-  ctx.stroke();
-}
-
-
-    // Draws the unit at its current pixel position.
-    function drawUnit() {
-      // Draw the unit as a blue circle.
-      ctx.beginPath();
-      ctx.arc(unitPixelPos.x, unitPixelPos.y, HEX_SIZE / 2, 0, Math.PI * 2);
-      ctx.fillStyle = 'blue';
-      ctx.fill();
-
-      // If the unit is selected, add an outer ring to indicate selection.
-      if (unitSelected) {
-        ctx.beginPath();
-        ctx.arc(unitPixelPos.x, unitPixelPos.y, HEX_SIZE / 2 + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = 'yellow';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.lineWidth = 1; // reset the line width
-      }
+    // Create the hexagon path.
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.PI / 3 * i + Math.PI / 6; // 30° offset for pointy-top hex.
+      const px = x + HEX_SIZE * Math.cos(angle);
+      const py = y + HEX_SIZE * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
     }
+    ctx.closePath();
 
+    // Save the context and set the clipping region to the hexagon.
+    ctx.save();
+    ctx.clip();
+
+    // Draw the image inside the clipped hexagon area.
+    ctx.drawImage(tileImage, x - HEX_SIZE, y - HEX_SIZE, HEX_SIZE * 2, HEX_SIZE * 2);
+
+    // Restore the context to remove the clipping region.
+    ctx.restore();
+
+    // Optionally, if you want a border around the hex, stroke the path.
+    ctx.strokeStyle = '#333';
+    ctx.stroke();
+  }
+
+
+// Add these variables at the top with your other asset declarations
+let unitImage = new Image();
+let selectedImage = new Image();
+
+
+unitImage.src = 'assets/imgs/merkava-mk1.png';      
+selectedImage.src = 'assets/imgs/merkava-mk1.png';
+
+function drawUnit() {
+  // Draw unit image centered at unitPixelPos
+  const drawWidth = HEX_SIZE - 9;
+  const drawHeight = HEX_SIZE - 35;
+  const x = unitPixelPos.x - drawWidth/2;
+  const y = unitPixelPos.y - drawHeight/2;
+  
+  ctx.drawImage(unitImage, x, y, drawWidth, drawHeight);
+
+  // Draw selection indicator if selected
+ 
+}
     // Convert two axial positions into cube coordinates to check for adjacency.
     function areAdjacent(hex1, hex2) {
       const cube1 = { 
