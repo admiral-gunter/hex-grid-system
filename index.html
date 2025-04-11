@@ -276,47 +276,6 @@
       setTimeout(draw, 200);
     }
 
-    // Check for enemy units in LOS for a given faction.
-    // For simplicity, we assume each unit "spots" an enemy if within 3 hexes.
-   // function checkEngagementForFaction(faction) {
-   //    var enemyFaction = (faction === "ISRAEL") ? "US" : "ISRAEL";
-   //    units[faction].forEach(function(unit) {
-   //      units[enemyFaction].forEach(function(enemy) {
-   //        // Calculate the distance in hexes.
-   //        var distance = hexDistance(unit.pos, enemy.pos);
-   //        // If enemy is within range:
-   //        if (distance <= 4) {
-   //          // Set base spotting chances based on unit type.
-   //          var baseSpotting = 0;
-   //          if (unit.type === 'MERKAVA') {
-   //            baseSpotting = unit.spottingChance !== undefined ? unit.spottingChance : 0.7; // Default 70%
-   //          } else if (unit.type === 'M1ABRAMS') {
-   //            baseSpotting = unit.spottingChance !== undefined ? unit.spottingChance : 0.6; // Default 60%
-   //          }
-            
-   //          // Optional properties: crewExperience and crewMorale. Default to 1.0 if not provided.
-   //          var crewExperience = unit.crewExperience !== undefined ? unit.crewExperience : 1.0;
-   //          var crewMorale = unit.crewMorale !== undefined ? unit.crewMorale : 1.0;
-            
-   //          // Introduce a slight dice roll error between -0.1 and +0.1 to simulate moral human error.
-   //          var randomError = (Math.random() * 0.2) - 0.1; // Value between -0.1 and +0.1
-            
-   //          // Compute the final spotting chance.
-   //          var finalSpottingChance = (baseSpotting * crewExperience * crewMorale) + randomError;
-   //          // Clamp the final chance between 0 and 1.
-   //          finalSpottingChance = Math.min(1, Math.max(0, finalSpottingChance));
-            
-   //          // Roll a random value. If within final chance, simulate firing.
-   //          if (Math.random() <= finalSpottingChance) {
-   //            simulateFiring(unit, enemy);
-   //          } else {
-   //            alert(unit.type + " failed to spot enemy " + enemy.type +
-   //                        " (Chance: " + finalSpottingChance.toFixed(2) + ")");
-   //          }
-   //        }
-   //      });
-   //    });
-   //  }
 
 
 function checkEngagementForFaction(faction) {
@@ -335,7 +294,7 @@ function checkEngagementForFaction(faction) {
         }
 
         // Optional: crew experience and morale, default to 1.0
-        var crewExperience = unit.crewExperience ?? 0.1;
+        var crewExperience = unit.crewExperience ?? 1.1;
         var crewMorale = unit.crewMorale ?? 1.0;
 
         // Distance modifier (closer = better)
@@ -353,11 +312,13 @@ function checkEngagementForFaction(faction) {
         // Final chance
         var finalSpottingChance = (baseSpotting * crewExperience * crewMorale) + distanceBonus + randomError;
         finalSpottingChance = Math.min(1, Math.max(0, finalSpottingChance));
+        console.log(`spotting chance result : ${finalSpottingChance},  point required to spot ${Math.random()}`)
 
         if (Math.random() <= finalSpottingChance) {
           simulateFiring(unit, enemy);
         } else {
-          console.log(`${unit.type} failed to spot ${enemy.type} at ${distance} hexes (Chance: ${finalSpottingChance.toFixed(2)})`);
+          
+          // console.log(`${unit.type} failed to spot ${enemy.type} at ${distance} hexes (Chance: ${finalSpottingChance.toFixed(2)})`);
         }
       }
     });
