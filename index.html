@@ -158,6 +158,9 @@
       "US": []
     };
 
+
+
+
     // Helper function to get a flat array of all units
     function getAllUnits() {
       var all = [];
@@ -175,7 +178,7 @@
       type: 'MERKAVA',
       pos: { q: 0, r: 0 },
       image: merkavaImage,
-      angle: 0,
+      angle: -1,
       fxd_h:5,
       fxd_w:10,
     }));
@@ -278,20 +281,20 @@
           }
         });
 
-        if (closestHex && minDist < HEX_SIZE) {
+        // if (closestHex && minDist < HEX_SIZE) {
           // Only allow movement if the hex is adjacent.
           var currentHex = new Hex(selectedUnit.pos.q, selectedUnit.pos.r);
-          if (areAdjacent(currentHex, closestHex)) {
+          // if (areAdjacent(currentHex, closestHex)) {
             var startPos = { x: selectedUnit.pixelPos.x, y: selectedUnit.pixelPos.y };
             var endPos = {
               x: closestHex.getPixelX(HEX_SIZE) + canvas.width / 2,
               y: closestHex.getPixelY(HEX_SIZE) + canvas.height / 2
             };
             animateUnitMovement(selectedUnit, startPos, endPos, 300, closestHex);
-          } else {
+          // } else {
             console.log("Clicked hex is not adjacent to the selected unit.");
-          }
-        }
+          // }
+        // }
       }
     });
 
