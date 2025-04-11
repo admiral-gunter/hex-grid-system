@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hex Grid Movement - Multiple Units (Traditional Functions)</title>
+  <title>Hex Grid Engagement - Abrams vs Merkava</title>
   <style>
     canvas {
       border: 1px solid black;
@@ -12,8 +12,6 @@
   <!-- 1080 x 1920 -->
   <div style="position: relative; width: 1920px; height: 1080px;">
     <canvas id="gameCanvas" width="1920" height="1080" style="z-index: 1; position: absolute; top: 0; left: 0;"></canvas>
-
-    <!-- Shader overlay div (if needed) -->
     <div id="shaderOverlay" style="
       position: absolute;
       top: 0;
@@ -21,6 +19,8 @@
       width: 1920px;
       height: 1080px;
       z-index: 2;
+      background: rgba(255, 223, 128, 0.2); /* Soft golden yellow with 40% opacity */
+
       pointer-events: none;
       background-size: cover;
     "></div>
@@ -34,10 +34,10 @@
       this.r = r;
     }
     Hex.prototype.getPixelX = function(hexSize) {
-      return hexSize * (Math.sqrt(3) * this.q + Math.sqrt(3)/2 * this.r);
+      return hexSize * (Math.sqrt(3) * this.q + Math.sqrt(3) / 2 * this.r);
     };
     Hex.prototype.getPixelY = function(hexSize) {
-      return hexSize * (3/2 * this.r);
+      return hexSize * (3 / 2 * this.r);
     };
 
     // Traditional function for Grid
@@ -65,6 +65,31 @@
         x: hex.getPixelX(HEX_SIZE) + canvas.width / 2,
         y: hex.getPixelY(HEX_SIZE) + canvas.height / 2
       };
+    }
+
+    // Helper function to get the six vertices of a hex centered at (centerX, centerY)
+    function getHexPolygonPoints(centerX, centerY, hexSize) {
+      var points = [];
+      for (var i = 0; i < 6; i++) {
+        var angle = Math.PI / 3 * i + Math.PI / 6;
+        var px = centerX + hexSize * Math.cos(angle);
+        var py = centerY + hexSize * Math.sin(angle);
+        points.push({ x: px, y: py });
+      }
+      return points;
+    }
+
+    // Helper function: determine if (x, y) is inside a polygon (ray-casting algorithm)
+    function pointInPolygon(x, y, polygon) {
+      var inside = false;
+      for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        var xi = polygon[i].x, yi = polygon[i].y;
+        var xj = polygon[j].x, yj = polygon[j].y;
+        var intersect = ((yi > y) !== (yj > y)) &&
+                        (x < (xj - xi) * (y - yi) / (yj - yi + 0.00001) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
     }
 
     // Load the tile image for hexes.
@@ -103,7 +128,7 @@
 
     // Traditional function for Unit
     function Unit(options) {
-      // options should contain: id, type, pos (axial {q, r}), image, angle, drawOffset (optional)
+      // options should include: id, type, pos (axial {q, r}), image, angle, drawOffset (optional)
       this.id = options.id;
       this.type = options.type;
       this.pos = options.pos; // axial coordinates
@@ -113,11 +138,10 @@
       this.selected = false;
       // Initial pixel position based on axial position.
       this.pixelPos = getPixelFromAxial(this.pos);
-      if(options.fxd_h != null && options.fxd_w != null ){
+      if (options.fxd_h != null && options.fxd_w != null) {
         this.fxd_h = options.fxd_h;
         this.fxd_w = options.fxd_w;
       }
-
     }
     Unit.prototype.updatePixelPos = function() {
       this.pixelPos = getPixelFromAxial(this.pos);
@@ -127,29 +151,30 @@
       var y = this.pixelPos.y;
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(this.angle * Math.PI / 3); // adjust rotation if needed
-      if(this.fxd_h){
-
+      ctx.rotate(this.angle * Math.PI / 3);
+      if (this.fxd_h) {
         // Draw unit image centered.
-        ctx.drawImage(this.image, -this.drawOffset.width / 2, -this.drawOffset.height / 2, this.drawOffset.width + this.fxd_w, this.drawOffset.height+ this.fxd_h);
-      }else{
-        ctx.drawImage(this.image, -this.drawOffset.width / 2, -this.drawOffset.height / 2, this.drawOffset.width, this.drawOffset.height);
-
+        ctx.drawImage(this.image, -this.drawOffset.width / 2, -this.drawOffset.height / 2,
+                      this.drawOffset.width + this.fxd_w, this.drawOffset.height + this.fxd_h);
+      } else {
+        ctx.drawImage(this.image, -this.drawOffset.width / 2, -this.drawOffset.height / 2,
+                      this.drawOffset.width, this.drawOffset.height);
       }
       // If the unit is selected, draw an outline.
       if (this.selected) {
         ctx.beginPath();
-        ctx.arc(0, 0, HEX_SIZE/2 + 5, 0, 2 * Math.PI);
+        ctx.arc(0, 0, HEX_SIZE / 2 + 5, 0, 2 * Math.PI);
         ctx.strokeStyle = 'yellow';
         ctx.lineWidth = 4;
         ctx.stroke();
       }
       ctx.restore();
     };
+
+    // Updated detection for clicking on a unit: use hex shape area.
     Unit.prototype.isClicked = function(mouseX, mouseY) {
-      var dx = mouseX - this.pixelPos.x;
-      var dy = mouseY - this.pixelPos.y;
-      return Math.sqrt(dx * dx + dy * dy) < HEX_SIZE / 2;
+      var polygon = getHexPolygonPoints(this.pixelPos.x, this.pixelPos.y, HEX_SIZE);
+      return pointInPolygon(mouseX, mouseY, polygon);
     };
 
     // Initialize the global object with US and ISRAEL faction arrays.
@@ -158,10 +183,7 @@
       "US": []
     };
 
-
-
-
-    // Helper function to get a flat array of all units
+    // Helper function to get a flat array of all units.
     function getAllUnits() {
       var all = [];
       for (var faction in units) {
@@ -178,9 +200,9 @@
       type: 'MERKAVA',
       pos: { q: 0, r: 0 },
       image: merkavaImage,
-      angle: -1,
-      fxd_h:5,
-      fxd_w:10,
+      angle: 0,
+      fxd_h: 5,
+      fxd_w: 10,
     }));
 
     // Add an Abrams unit at axial (2, -1) to US faction.
@@ -189,10 +211,10 @@
       type: 'M1ABRAMS',
       pos: { q: 2, r: -1 },
       image: abramsImage,
-      angle: 2
+      angle: 0
     }));
 
-    // Check if two hexes (given in axial coordinates) are adjacent.
+    // Check if two hexes (using their axial coordinates) are adjacent.
     function areAdjacent(hex1, hex2) {
       var cube1 = { x: hex1.q, z: hex1.r, y: -hex1.q - hex1.r };
       var cube2 = { x: hex2.q, z: hex2.r, y: -hex2.q - hex2.r };
@@ -200,6 +222,11 @@
       var dy = Math.abs(cube1.y - cube2.y);
       var dz = Math.abs(cube1.z - cube2.z);
       return (dx + dy + dz) / 2 === 1;
+    }
+
+    // Helper: Compute hex distance between two axial coordinates.
+    function hexDistance(a, b) {
+      return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
     }
 
     // Animate the movement of a unit.
@@ -216,16 +243,127 @@
         if (t < 1) {
           requestAnimationFrame(animate);
         } else {
-          // End of animation.
+          // End of animation: update position and deselect.
           unit.pixelPos = { x: endPos.x, y: endPos.y };
-          // Update the unit's logical axial coordinates.
           unit.pos = { q: targetHex.q, r: targetHex.r };
-          unit.selected = false; // Deselect after moving.
+          unit.selected = false;
           draw();
+          // After movement, check if any enemy unit is spotted.
+          checkEngagementForFaction(unitFaction(unit));
         }
       }
       requestAnimationFrame(animate);
     }
+
+    // Determine which faction a unit belongs to.
+    function unitFaction(unit) {
+      return (unit.type === 'MERKAVA') ? "ISRAEL" : "US";
+    }
+
+    // Simulate a firing event from attacker to target.
+    function simulateFiring(attacker, target) {
+      // Draw a red line to indicate firing.
+      ctx.save();
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(attacker.pixelPos.x, attacker.pixelPos.y);
+      ctx.lineTo(target.pixelPos.x, target.pixelPos.y);
+      ctx.stroke();
+      ctx.restore();
+      console.log(attacker.type + " fires at " + target.type);
+      // Clear the firing effect after a short duration.
+      setTimeout(draw, 200);
+    }
+
+    // Check for enemy units in LOS for a given faction.
+    // For simplicity, we assume each unit "spots" an enemy if within 3 hexes.
+   // function checkEngagementForFaction(faction) {
+   //    var enemyFaction = (faction === "ISRAEL") ? "US" : "ISRAEL";
+   //    units[faction].forEach(function(unit) {
+   //      units[enemyFaction].forEach(function(enemy) {
+   //        // Calculate the distance in hexes.
+   //        var distance = hexDistance(unit.pos, enemy.pos);
+   //        // If enemy is within range:
+   //        if (distance <= 4) {
+   //          // Set base spotting chances based on unit type.
+   //          var baseSpotting = 0;
+   //          if (unit.type === 'MERKAVA') {
+   //            baseSpotting = unit.spottingChance !== undefined ? unit.spottingChance : 0.7; // Default 70%
+   //          } else if (unit.type === 'M1ABRAMS') {
+   //            baseSpotting = unit.spottingChance !== undefined ? unit.spottingChance : 0.6; // Default 60%
+   //          }
+            
+   //          // Optional properties: crewExperience and crewMorale. Default to 1.0 if not provided.
+   //          var crewExperience = unit.crewExperience !== undefined ? unit.crewExperience : 1.0;
+   //          var crewMorale = unit.crewMorale !== undefined ? unit.crewMorale : 1.0;
+            
+   //          // Introduce a slight dice roll error between -0.1 and +0.1 to simulate moral human error.
+   //          var randomError = (Math.random() * 0.2) - 0.1; // Value between -0.1 and +0.1
+            
+   //          // Compute the final spotting chance.
+   //          var finalSpottingChance = (baseSpotting * crewExperience * crewMorale) + randomError;
+   //          // Clamp the final chance between 0 and 1.
+   //          finalSpottingChance = Math.min(1, Math.max(0, finalSpottingChance));
+            
+   //          // Roll a random value. If within final chance, simulate firing.
+   //          if (Math.random() <= finalSpottingChance) {
+   //            simulateFiring(unit, enemy);
+   //          } else {
+   //            alert(unit.type + " failed to spot enemy " + enemy.type +
+   //                        " (Chance: " + finalSpottingChance.toFixed(2) + ")");
+   //          }
+   //        }
+   //      });
+   //    });
+   //  }
+
+
+function checkEngagementForFaction(faction) {
+  var enemyFaction = (faction === "ISRAEL") ? "US" : "ISRAEL";
+  
+  units[faction].forEach(function(unit) {
+    units[enemyFaction].forEach(function(enemy) {
+      var distance = hexDistance(unit.pos, enemy.pos);
+      if (distance <= 4) {
+        // Base spotting chances by type
+        var baseSpotting = 0;
+        if (unit.type === 'MERKAVA') {
+          baseSpotting = unit.spottingChance ?? 0.7;
+        } else if (unit.type === 'M1ABRAMS') {
+          baseSpotting = unit.spottingChance ?? 0.6;
+        }
+
+        // Optional: crew experience and morale, default to 1.0
+        var crewExperience = unit.crewExperience ?? 0.1;
+        var crewMorale = unit.crewMorale ?? 1.0;
+
+        // Distance modifier (closer = better)
+        var distanceBonus = 0;
+        switch (distance) {
+          case 1: distanceBonus = 0.3; break;
+          case 2: distanceBonus = 0.2; break;
+          case 3: distanceBonus = 0.1; break;
+          case 4: distanceBonus = 0.0; break;
+        }
+
+        // Subtle human error: small rng between -0.02 and +0.02
+        var randomError = (Math.random() * 0.04) - 0.02;
+
+        // Final chance
+        var finalSpottingChance = (baseSpotting * crewExperience * crewMorale) + distanceBonus + randomError;
+        finalSpottingChance = Math.min(1, Math.max(0, finalSpottingChance));
+
+        if (Math.random() <= finalSpottingChance) {
+          simulateFiring(unit, enemy);
+        } else {
+          console.log(`${unit.type} failed to spot ${enemy.type} at ${distance} hexes (Chance: ${finalSpottingChance.toFixed(2)})`);
+        }
+      }
+    });
+  });
+}
+
 
     // The main draw function: draws the grid and every unit.
     function draw() {
@@ -233,19 +371,18 @@
       grid.hexes.forEach(function(hex) {
         drawHex(hex);
       });
-      // Draw each unit from all factions.
       getAllUnits().forEach(function(unit) {
         unit.draw();
       });
     }
 
-    // Click handler: first check if any unit was clicked.
+    // Click handler: first check if a unit was clicked.
     canvas.addEventListener('click', function(event) {
       var rect = canvas.getBoundingClientRect();
       var mouseX = event.clientX - rect.left;
       var mouseY = event.clientY - rect.top;
-      
-      // If any unit is clicked, select that one (deselecting others).
+
+      // If a unit is clicked, select that one (deselect others).
       var clickedUnit = null;
       var allUnits = getAllUnits();
       for (var i = 0; i < allUnits.length; i++) {
@@ -255,15 +392,13 @@
         }
       }
       if (clickedUnit) {
-        // Deselect all units from all factions.
         allUnits.forEach(function(u) { u.selected = false; });
         clickedUnit.selected = true;
         draw();
-        return; // Stop further processing for this click.
+        return;
       }
 
-      // If no unit was clicked, check if a unit is currently selected
-      // and then see if the click is on a valid (adjacent) hex.
+      // If no unit was clicked, check if a unit is selected and then treat the click as a move command.
       var selectedUnit = allUnits.find(function(u) { return u.selected; });
       if (selectedUnit) {
         // Find the closest hex to the click.
@@ -280,21 +415,18 @@
             closestHex = hex;
           }
         });
-
-        // if (closestHex && minDist < HEX_SIZE) {
-          // Only allow movement if the hex is adjacent.
-          var currentHex = new Hex(selectedUnit.pos.q, selectedUnit.pos.r);
-          // if (areAdjacent(currentHex, closestHex)) {
-            var startPos = { x: selectedUnit.pixelPos.x, y: selectedUnit.pixelPos.y };
-            var endPos = {
-              x: closestHex.getPixelX(HEX_SIZE) + canvas.width / 2,
-              y: closestHex.getPixelY(HEX_SIZE) + canvas.height / 2
-            };
-            animateUnitMovement(selectedUnit, startPos, endPos, 300, closestHex);
-          // } else {
-            console.log("Clicked hex is not adjacent to the selected unit.");
-          // }
-        // }
+        // Allow movement if an adjacent hex is clicked.
+        var currentHex = new Hex(selectedUnit.pos.q, selectedUnit.pos.r);
+        if (areAdjacent(currentHex, closestHex)) {
+          var startPos = { x: selectedUnit.pixelPos.x, y: selectedUnit.pixelPos.y };
+          var endPos = {
+            x: closestHex.getPixelX(HEX_SIZE) + canvas.width / 2,
+            y: closestHex.getPixelY(HEX_SIZE) + canvas.height / 2
+          };
+          animateUnitMovement(selectedUnit, startPos, endPos, 300, closestHex);
+        } else {
+          console.log("Clicked hex is not adjacent.");
+        }
       }
     });
 
