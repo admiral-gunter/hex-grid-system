@@ -8,6 +8,15 @@
       display: block;
       /* Ensure canvas fills the container if desired */
     }
+
+     @keyframes sandstormAnimation {
+    0% {
+      background-position: 100% 0%;
+    }
+    100% {
+      background-position: 0% 100%;
+    }
+  }
   </style>
 </head>
 <body>
@@ -22,36 +31,58 @@
 </audio>
 
   <!-- 1080 x 1920 -->
-  <div style="position: relative; width: 1920px; height: 1080px;">
-    <canvas id="gameCanvas" width="1920" height="1080" style="z-index: 1; position: absolute; top: 0; left: 0;"></canvas>
+  <div style="position: relative; width: 8000px; height: 2080px;">
+    <canvas id="gameCanvas" width="8000" height="2080" style="z-index: 1; position: absolute; top: 0; left: 0;"></canvas>
     <div id="shaderOverlay" style="
       position: absolute;
       top: 0;
       left: 0;
-      width: 1920px;
-      height: 1080px;
+      width: 8000px;
+      height: 2080px;
       z-index: 2;
       background: rgba(255, 223, 128, 0.2);
       pointer-events: none;
       background-size: cover;
     "></div>
 
-    <canvas id="explosionCanvas" width="1920" height="1080" style="z-index: 3; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+        <div id="shaderWeatherOverlay" style="
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 8000px;
+      height: 2080px;
+      z-index: 2;
+      pointer-events: none;
+        background: url('sandstorm-texture.png');
+      background-size: cover;
+    "></div>
+
+
+    <canvas id="explosionCanvas" width="8000" height="2080" style="z-index: 3; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+
   </div>
 
   <div id="status">Click a unit to select it, then click an adjacent hex to move it</div>
   <script>
     // Define the tile layout.
     const S = 'assets/imgs/hex-desert-terrain.jpg';
+    const CRATER = 'assets/imgs/crater.png';
+    const DB1 = 'assets/imgs/destroyed_building_1.png';
+
+
     const TILE = [
-      [S, S, S, S, S, S, S, S, S, S],
-      [S, S, S, S, S, S, S, S, S, S],
-      [S, S, S, S, S, S, S, S, S, S],
-      [S, S, S, S, S, S, S, S, S, S],
-      [S, S, S, S, S, S, S, S, S, S],
-      [S, S, S, S, S, S, S, S, S, S],
-      [S, S, S, S, S, S, S, S, S, S],
-      [S, S, S, S, S, S]
+    [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+    [S, S, S, S, S, S, S, S, CRATER, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+    [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+    [S, S, S, S, S, S, S, S, S, S,CRATER, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+    [S, S, S, S, S, S, S, S, CRATER, S,DB1, S, CRATER, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+    [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+    [S, S, S, S, S, S, S, S, S, S,S, S, CRATER, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+    [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+     [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+      [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+       [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
+        [S, S, S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S, S, S, S, S, S, S, S,S, S, S, S, S, S, S, S, S, S,S,S,S, S, S, S, S, S, S, S, S, S,S],
     ];
 
     // Image cache for tile images.
@@ -202,6 +233,9 @@ function playAbramsEngineAudio() {
     var abramsImage = new Image();
     abramsImage.src = 'assets/imgs/abrams.png';
 
+     var bradleyImage = new Image();
+    bradleyImage.src = 'assets/imgs/bradley.png';
+
     // Constructor for a unit.
     function Unit(options) {
       this.id = options.id;
@@ -270,9 +304,9 @@ function playAbramsEngineAudio() {
     units['ISRAEL'].push(new Unit({
       id: 1,
       type: 'MERKAVA',
-      pos: { q: 0, r: 0 },
+      pos: { q: 8, r: 4 },
       image: merkavaImage,
-      angle: 0,
+      angle: 9,
       fxd_h: 5,
       fxd_w: 10,
     }));
@@ -281,10 +315,30 @@ function playAbramsEngineAudio() {
     units['US'].push(new Unit({
       id: 2,
       type: 'M1ABRAMS',
-      pos: { q: 9, r: 1 },
+      pos: { q: 30, r: 0 },
       image: abramsImage,
       angle: 0
     }));
+
+        units['US'].push(new Unit({
+      id: 2,
+      type: 'M1ABRAMS',
+      pos: { q: 40, r: 0 },
+      image: abramsImage,
+      angle: 0
+    }));
+
+
+    units['US'].push(new Unit({
+      id: 2,
+      type: 'BRADLEY',
+      pos: { q: 40, r: 2 },
+      image: bradleyImage,
+      angle: 0,
+      fxd_h: -8,
+      fxd_w: -23,
+    }));
+
 
     // Check if two hexes (axial) are adjacent.
     function areAdjacent(hex1, hex2) {
@@ -331,7 +385,7 @@ function playAbramsEngineAudio() {
 
     // Simulate unit firing.
     function simulateFiring(attacker, target) {
-      document.getElementById('abrams_firing_sound').play()
+      // document.getElementById('abrams_firing_sound').play()
       ctx.save();
       ctx.strokeStyle = 'red';
       ctx.lineWidth = 3;
@@ -341,6 +395,8 @@ function playAbramsEngineAudio() {
       ctx.stroke();
       ctx.restore();
       console.log(attacker.type + " fires at " + target.type);
+
+      alert(attacker.type + " fires at " + target.type);
 
       explosionEffect(target.pixelPos.x, target.pixelPos.y);
       setTimeout(draw, 200);
@@ -372,73 +428,74 @@ function playAbramsEngineAudio() {
     //   });
     // }
 
+function getDistanceBonus(distance) {
+  // Maximum bonus when distance is 1.
+  const maxBonus = 0.3;
+  // For every additional distance unit, reduce the bonus by this decay factor.
+  const decayFactor = 0.1;
+  // Calculate bonus so that if distance is 1, bonus is maxBonus, and if distance > 1, bonus decreases.
+  let bonus = maxBonus - ((distance - 1) * decayFactor);
+  // Ensure we don’t drop below zero.
+  return Math.max(0, bonus);
+}
 
-  function checkEngagementForFaction(faction) {
-    var enemyFaction = (faction === "ISRAEL") ? "US" : "ISRAEL";
+function checkEngagementForFaction(faction) {
+  var enemyFaction = (faction === "ISRAEL") ? "US" : "ISRAEL";
 
-    units[faction].forEach(function(unit) {
-      units[enemyFaction].forEach(function(enemy) {
-        console.log('ssorri')
-        console.log(enemy.pos)
-        var distance = hexDistance(unit.pos, enemy.pos);
-        if (distance <= 4) {
+  units[faction].forEach(function(unit) {
+    units[enemyFaction].forEach(function(enemy) {
+      console.log('ssorri');
+      console.log(enemy.pos);
+      var distance = hexDistance(unit.pos, enemy.pos);
+      if (distance <= 20) {
 
-
-             // --- Defensive Spotting: Enemy detects a moving unit ---
-          // Here we assume that if the attacking unit has moved (unit.moved is true)
-          // and the enemy is in a defensive (stationary) position (enemy.moved is false),
-          // then the enemy gets a bonus chance to detect and fire back.
-          // if (unit.moved && !enemy.moved) {
-            // Enemy's base spotting chance (can use similar defaults)
-            var enemyBaseSpotting = (enemy.type === 'MERKAVA') 
-                                     ? (enemy.spottingChance ?? 0.7) 
-                                     : (enemy.spottingChance ?? 0.6);
-            var enemyCrewExperience = enemy.crewExperience ?? 1.0;
-            var enemyCrewMorale = enemy.crewMorale ?? 1.0;
+        // --- Defensive Spotting: Enemy detects a moving unit ---
+        var enemyBaseSpotting = (enemy.type === 'MERKAVA') 
+                                 ? (enemy.spottingChance ?? 0.7) 
+                                 : (enemy.spottingChance ?? 0.6);
+        var enemyCrewExperience = enemy.crewExperience ?? 1.0;
+        var enemyCrewMorale = enemy.crewMorale ?? 1.0;
     
-            // Defensive bonus for enemy
-            var defensiveBonus = 0.1;  // Increase as desired to represent heightened awareness
-            // Optionally, you can also consider a penalty if enemy were moving.
-            var enemyFinalSpottingChance = (enemyBaseSpotting * enemyCrewExperience * enemyCrewMorale) + defensiveBonus + ((Math.random() * 0.02) - 0.000005);
-            enemyFinalSpottingChance = Math.min(1, Math.max(0, enemyFinalSpottingChance));
+        // Defensive bonus for enemy
+        var defensiveBonus = 0.1;  // Increase as desired to represent heightened awareness
+        var enemyFinalSpottingChance = (enemyBaseSpotting * enemyCrewExperience * enemyCrewMorale) + defensiveBonus + ((Math.random() * 0.02) - 0.000005);
+        enemyFinalSpottingChance = Math.min(1, Math.max(0, enemyFinalSpottingChance));
     
-            alert(`Defensive spotting chance (enemy): ${enemyFinalSpottingChance}, random point: ${0.6}`);
+        alert(`Defensive spotting chance (enemy): ${enemyFinalSpottingChance}, random point: ${0.70}`);
     
-            if (0.6 <= enemyFinalSpottingChance) {
-              simulateFiring(enemy, unit);
-            } else {
-              console.log('Enemy fails to spot the moving unit.');
-            }
-          // }
-
-          // --- Attacker's Spotting Calculation ---
-          var baseSpotting = (unit.type === 'MERKAVA') 
-                               ? (unit.spottingChance ?? 0.7) 
-                               : (unit.spottingChance ?? 0.6);
-          var crewExperience = unit.crewExperience ?? 1.1;
-          var crewMorale = unit.crewMorale ?? 1.0;
-          var distanceBonus = (distance === 1) ? 0.3 :
-                              (distance === 2) ? 0.2 :
-                              (distance === 3) ? 0.1 : 0.0;
-          var randomError = (Math.random() * 0.04) - 0.02;
-    
-          // Final spotting chance for the attacking unit to fire at the enemy.
-          var finalSpottingChance = (baseSpotting * crewExperience * crewMorale) + distanceBonus + randomError;
-          finalSpottingChance = Math.min(1, Math.max(0, finalSpottingChance));
-          const attackerDice = Math.random();
-          alert(`Attacker spotting chance result: ${finalSpottingChance}, random point: ${attackerDice}`);
-    
-          if (attackerDice <= finalSpottingChance) {
-            simulateFiring(unit, enemy);
-          } else {
-            console.log('Attacker fails to spot enemy.');
-          }
-    
-       
+        if (0.70 <= enemyFinalSpottingChance) {
+          simulateFiring(enemy, unit);
+        } else {
+          console.log('Enemy fails to spot the moving unit.');
         }
-      });
+    
+        // --- Attacker's Spotting Calculation ---
+        var baseSpotting = (unit.type === 'MERKAVA') 
+                           ? (unit.spottingChance ?? 0.7) 
+                           : (unit.spottingChance ?? 0.6);
+        var crewExperience = unit.crewExperience ?? 1.1;
+        var crewMorale = unit.crewMorale ?? 1.0;
+        
+        // Use the helper function to determine distance bonus dynamically.
+        var distanceBonus = getDistanceBonus(distance);
+        var randomError = (Math.random() * 0.04) - 0.02;
+    
+        // Final spotting chance for the attacking unit to fire at the enemy.
+        var finalSpottingChance = (baseSpotting * crewExperience * crewMorale) + distanceBonus + randomError;
+        finalSpottingChance = Math.min(1, Math.max(0, finalSpottingChance));
+        const attackerDice = Math.random();
+        alert(`Attacker spotting chance result: ${finalSpottingChance}, random point: ${attackerDice}`);
+    
+        if (attackerDice <= finalSpottingChance) {
+          simulateFiring(unit, enemy);
+        } else {
+          console.log('Attacker fails to spot enemy.');
+        }
+    
+      }
     });
-  }
+  });
+}
 
 
     // Main draw function: draws hex grid and units.
@@ -490,7 +547,7 @@ function playAbramsEngineAudio() {
         // Create a currentHex representation for the selected unit.
         var currentHex = new Hex(selectedUnit.pos.q, selectedUnit.pos.r);
         if (areAdjacent(currentHex, closestHex)) {
-      playAbramsEngineAudio()
+      // playAbramsEngineAudio()
 
           // Compute starting and ending pixel positions
           var startPos = { x: selectedUnit.pixelPos.x, y: selectedUnit.pixelPos.y };
